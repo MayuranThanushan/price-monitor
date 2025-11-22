@@ -11,6 +11,10 @@ function resolveHost(){
   const override = typeof window !== 'undefined' ? window.localStorage.getItem('pm_api_host') : null
   let host = override || env.VITE_API_BASE_URL || env.VITE_API_URL || ''
   if (!host && typeof window !== 'undefined') host = window.location.origin
+  // If still pointing to the frontend Vercel domain (no backend env provided) auto-switch to Railway production
+  if (host && /price-monitor-three\.vercel\.app$/.test(host) && !override && !env.VITE_API_BASE_URL && !env.VITE_API_URL) {
+    host = 'https://pricemonitor-production.up.railway.app'
+  }
   if (!host) host = 'https://pricemonitor-production.up.railway.app'
   return host
 }

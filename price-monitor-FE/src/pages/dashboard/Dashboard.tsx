@@ -14,6 +14,7 @@ import TrackerCard, { TrackerCardProps } from '../../components/dashboard/Tracke
 import OfferCard from '../../components/dashboard/OfferCard'
 import Button from '../../components/ui/Button'
 import { Plus } from 'lucide-react'
+import { currentApiHost } from '../../api/axiosClient'
 
 export default function Dashboard(){
   const { data: statsData, isLoading: statsLoading, isError: statsError, error: statsErr } = useQuery(['category-stats'], () => getCategoryStats().then(r=>r.data), { refetchOnWindowFocus:false })
@@ -49,6 +50,8 @@ export default function Dashboard(){
   const activeTrackers = !metricsError ? metricsData?.data?.activeTrackers : null
   // offersData expected shape: { data: [{ shop: string, offers: Offer[] }] }
   const flattenedOffers = (offersData?.data || []).flatMap((g:any) => g.offers || [])
+  const apiHost = currentApiHost().replace(/\/api$/, '')
+  const anyQueryError = statsError || metricsError || offersError || healthError
 
   return (
     <DashboardLayout>
@@ -60,6 +63,9 @@ export default function Dashboard(){
             <StatCard label='Alerts Today' value={alertsToday ?? 'No data'} />
             <StatCard label='Offers Available' value={flattenedOffers.length || (offersLoading ? 'Loading...' : offersError ? 'No data' : '0')} />
             <StatCard label='API Uptime (s)' value={healthLoading ? '...' : healthError ? 'Down' : Math.floor(healthData?.uptime ?? 0)} />
+          </div>
+          <div className='mt-6 text-xs text-gray-500'>
+            Host: <span className='font-mono'>{apiHost}</span> | Token: {localStorage.getItem('pm_token') ? 'present' : 'missing'} {anyQueryError && <span className='text-red-600 ml-2'>(data load error)</span>}
           </div>
         </SectionClean>
         <div className='grid lg:grid-cols-3 gap-8 mt-10'>
