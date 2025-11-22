@@ -1,6 +1,7 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getDashboardMetrics } from '../../api/metricsAPI'
+import { getHealth } from '../../api/healthAPI'
 import { getCategoryStats } from '../../api/categoryStatsAPI'
 import { listOffersGrouped } from '../../api/offersAPI'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -17,6 +18,7 @@ import { Plus } from 'lucide-react'
 export default function Dashboard(){
   const { data: statsData, isLoading: statsLoading, isError: statsError, error: statsErr } = useQuery(['category-stats'], () => getCategoryStats().then(r=>r.data), { refetchOnWindowFocus:false })
   const { data: metricsData, isError: metricsError, error: metricsErr } = useQuery(['dashboard-metrics'], () => getDashboardMetrics().then(r=>r.data), { refetchOnWindowFocus:false })
+  const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery(['health'], () => getHealth().then(r=>r.data), { refetchOnWindowFocus:false, refetchInterval: 60000 })
   const { data: offersData, isLoading: offersLoading, isError: offersError } = useQuery(['grouped-offers'], () => listOffersGrouped().then((r:any)=>r.data), { refetchOnWindowFocus:false })
   useBackendGuard({ isError: statsError, error: statsErr })
   useBackendGuard({ isError: metricsError, error: metricsErr })
@@ -57,6 +59,7 @@ export default function Dashboard(){
             <StatCard label='Products Tracked' value={productsTracked ?? 'No data'} />
             <StatCard label='Alerts Today' value={alertsToday ?? 'No data'} />
             <StatCard label='Offers Available' value={flattenedOffers.length || (offersLoading ? 'Loading...' : offersError ? 'No data' : '0')} />
+            <StatCard label='API Uptime (s)' value={healthLoading ? '...' : healthError ? 'Down' : Math.floor(healthData?.uptime ?? 0)} />
           </div>
         </SectionClean>
         <div className='grid lg:grid-cols-3 gap-8 mt-10'>

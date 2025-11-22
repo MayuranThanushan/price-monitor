@@ -1,18 +1,13 @@
 import axios from 'axios'
 
-// Determine API base URL (priority: explicit env -> legacy env name -> window -> localhost)
+// Resolve base host from env with backward compatibility
 const env = (import.meta as any)?.env || {}
-const explicit = env.VITE_API_BASE_URL || env.VITE_API_URL || 'https://pricemonitor-production.up.railway.app'
-let derived = explicit
-if (!derived && typeof window !== 'undefined') {
-  // If frontend served from same domain, attempt relative API path assumption
-  const origin = window.location.origin
-  // If production domain detected, prefer it
-  if (/pricemonitor-production\.up\.railway\.app/.test(origin)) {
-    derived = origin
-  }
-}
-const baseURL = derived || 'https://pricemonitor-production.up.railway.app'
+let host = env.VITE_API_BASE_URL || env.VITE_API_URL || ''
+if (!host && typeof window !== 'undefined') host = window.location.origin
+if (!host) host = 'https://pricemonitor-production.up.railway.app'
+
+// Ensure single /api suffix (backend mounts routes under /api/*)
+const baseURL = host.replace(/\/$/, '').match(/\/api$/) ? host : host.replace(/\/$/, '') + '/api'
 
 const api = axios.create({
   baseURL,
