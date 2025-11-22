@@ -5,6 +5,7 @@ import { useAuthStore } from '../../context/AuthStore'
 import TextField from '../../components/forms/TextField'
 import Button from '../../components/ui/Button'
 import { LogIn } from 'lucide-react'
+import loginBg from '../../assets/login-bg.png'
 
 export default function Login(){
   const [email, setEmail] = useState('')
@@ -54,9 +55,10 @@ export default function Login(){
       <div className='hidden md:block min-h-full w-full bg-green-100 p-24'>
         <div className='h-full w-full relative'>
           <img
-            src='../src/assets/login-bg.png'
-            alt='Price Monitor'
+            src={loginBg}
+            alt='Price Monitor illustration'
             className='absolute inset-0 m-auto max-w-full max-h-full'
+            loading='eager'
           />
         </div>
       </div>
