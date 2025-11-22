@@ -4,7 +4,13 @@ const bcrypt = require('bcryptjs');
 const UserSchema = new mongoose.Schema({
   name: { type: String },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  role: { type: String, enum: ['user','admin'], default: 'user' },
+  // user-specific settings
+  scrapeIntervalMinutes: { type: Number, default: 60 },
+  timeZone: { type: String },
+  // card selection: array of { bank, card }
+  cards: { type: [{ bank: String, card: String }], default: [] }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function(next) {

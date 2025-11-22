@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../context/AuthStore'
+import Button from '../ui/Button'
 
 export default function Navbar() {
   const { token, user, clearAuth } = useAuthStore()
@@ -16,7 +17,7 @@ export default function Navbar() {
           {token ? (
             <>
               <span className='text-sm'>Hi, {user?.name || user?.email}</span>
-              <button onClick={logout} className='text-sm text-red-600'>Logout</button>
+                  <Button variant='danger' size='sm' onClick={logout}>Logout</Button>
             </>
           ) : (
             <>

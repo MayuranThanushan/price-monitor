@@ -9,7 +9,7 @@ module.exports = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-    req.user = { _id: user._id, email: user.email, name: user.name, id: user._id };
+    req.user = { _id: user._id, email: user.email, name: user.name, id: user._id, role: user.role };
     next();
   } catch (err) {
     return res.status(401).json({ ok: false, error: 'Invalid token' });

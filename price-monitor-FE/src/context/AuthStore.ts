@@ -1,9 +1,10 @@
 import create from 'zustand'
 
+type UserInfo = { id?: string; name?: string; email?: string; role?: 'user'|'admin' }
 type AuthState = {
   token: string | null
-  user: { id?: string; name?: string; email?: string } | null
-  setAuth: (token: string, user: any) => void
+  user: UserInfo | null
+  setAuth: (token: string, user: UserInfo) => void
   clearAuth: () => void
 }
 

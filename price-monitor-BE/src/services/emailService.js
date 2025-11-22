@@ -7,9 +7,18 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
+async function verifyTransport() {
+  try {
+    await transporter.verify();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 async function sendEmail({ to, subject, text, html }) {
-  const mailOptions = { from: process.env.EMAIL_USER, to, subject, text, html };
+  const mailOptions = { from: process.env.EMAIL_FROM || process.env.EMAIL_USER, to, subject, text, html };
   return transporter.sendMail(mailOptions);
 }
 
-module.exports = { sendEmail };
+module.exports = { sendEmail, verifyTransport };

@@ -1,0 +1,94 @@
+{
+  "info": {
+    "_postman_id": "b6c2c7c4-1111-4e44-aaaa-price-monitor-demo",
+    "name": "Price Monitor API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for Price Monitor backend endpoints. Uses {{baseUrl}} variable."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {"name": "Login","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"}],"url": {"raw": "{{baseUrl}}/api/auth/login","host": ["{{baseUrl}}"],"path": ["api","auth","login"]},"body": {"mode": "raw","raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"AdminPass123!\"\n}"}}},
+        {"name": "Register (Admin Only)","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/auth/register","host": ["{{baseUrl}}"],"path": ["api","auth","register"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"New User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"UserPass123!\",\n  \"role\": \"user\"\n}"}}},
+        {"name": "Me","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/auth/me","host": ["{{baseUrl}}"],"path": ["api","auth","me"]}}},
+        {"name": "Update Self","request": {"method": "PUT","description": "Update current user's profile fields.","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/auth/update","host": ["{{baseUrl}}"],"path": ["api","auth","update"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Updated Name\",\n  \"timeZone\": \"Europe/London\",\n  \"scrapeIntervalMinutes\": 30\n}"}}},
+        {"name": "Forgot Password","request": {"method": "POST","description": "Request a temporary password emailed to the user.","header": [{"key":"Content-Type","value":"application/json"}],"url": {"raw": "{{baseUrl}}/api/auth/forgot-password","host": ["{{baseUrl}}"],"path": ["api","auth","forgot-password"]},"body": {"mode": "raw","raw": "{\n  \"email\": \"user@example.com\"\n}"}}}
+      ]
+    },
+    {
+      "name": "Trackers",
+      "item": [
+        {"name": "List Trackers","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/trackers","host": ["{{baseUrl}}"],"path": ["api","trackers"]}}},
+        {"name": "Create Tracker","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/trackers","host": ["{{baseUrl}}"],"path": ["api","trackers"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Laptop Deals\",\n  \"baseUrl\": \"https://shop.example.com\",\n  \"categories\": [\"laptops\"],\n  \"keywords\": [\"dell\", \"thinkpad\"],\n  \"maxPrice\": 1500\n}"}}},
+        {"name": "Update Tracker","request": {"method": "PUT","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/trackers/:id","host": ["{{baseUrl}}"],"path": ["api","trackers",":id"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Laptop Deals Updated\"\n}"}}},
+        {"name": "Delete Tracker","request": {"method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/trackers/:id","host": ["{{baseUrl}}"],"path": ["api","trackers",":id"]}}}
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {"name": "List Categories","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/categories","host": ["{{baseUrl}}"],"path": ["api","categories"]}}},
+        {"name": "Category Stats","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/categories/stats","host": ["{{baseUrl}}"],"path": ["api","categories","stats"]}}},
+        {"name": "Create Category","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/categories","host": ["{{baseUrl}}"],"path": ["api","categories"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Phones\",\n  \"baseUrl\": \"https://shop.example.com\",\n  \"categoryUrl\": \"https://shop.example.com/phones\",\n  \"keywords\": [\"android\"],\n  \"maxPrice\": 800\n}"}}},
+        {"name": "Update Category","request": {"method": "PUT","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/categories/:id","host": ["{{baseUrl}}"],"path": ["api","categories",":id"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Phones Updated\"\n}"}}},
+        {"name": "Delete Category","request": {"method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/categories/:id","host": ["{{baseUrl}}"],"path": ["api","categories",":id"]}}}
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {"name": "Products By Tracker","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/products/:trackerId","host": ["{{baseUrl}}"],"path": ["api","products",":trackerId"]}}},
+        {"name": "Product History","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/products/history/:productId","host": ["{{baseUrl}}"],"path": ["api","products","history",":productId"]}}},
+        {"name": "Scrape User Categories","request": {"method": "POST","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/products/scrape","host": ["{{baseUrl}}"],"path": ["api","products","scrape"]}}}
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {"name": "Grouped Offers","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/offers/grouped","host": ["{{baseUrl}}"],"path": ["api","offers","grouped"]}}},
+        {"name": "List Sources","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/offers/sources","host": ["{{baseUrl}}"],"path": ["api","offers","sources"]}}},
+        {"name": "Create Source","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/offers/sources","host": ["{{baseUrl}}"],"path": ["api","offers","sources"]},"body": {"mode": "raw","raw": "{\n  \"bank\": \"MyBank\",\n  \"cardType\": \"both\",\n  \"urlCredit\": \"https://bank.example.com/credit\",\n  \"urlDebit\": \"https://bank.example.com/debit\"\n}"}}},
+        {"name": "Update Source","request": {"method": "PUT","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/offers/sources/:id","host": ["{{baseUrl}}"],"path": ["api","offers","sources",":id"]},"body": {"mode": "raw","raw": "{\n  \"bank\": \"MyBank Updated\"\n}"}}},
+        {"name": "Delete Source","request": {"method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/offers/sources/:id","host": ["{{baseUrl}}"],"path": ["api","offers","sources",":id"]}}}
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {"name": "List Alerts","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/alerts","host": ["{{baseUrl}}"],"path": ["api","alerts"]}}},
+        {"name": "Mark All Read","request": {"method": "POST","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/alerts/mark-all-read","host": ["{{baseUrl}}"],"path": ["api","alerts","mark-all-read"]}}},
+        {"name": "Mark Single Read","request": {"method": "POST","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/alerts/:id/read","host": ["{{baseUrl}}"],"path": ["api","alerts",":id","read"]}}}
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {"name": "Dashboard Metrics","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{userToken}}"}],"url": {"raw": "{{baseUrl}}/api/metrics/dashboard","host": ["{{baseUrl}}"],"path": ["api","metrics","dashboard"]}}}
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {"name": "List Users","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/users","host": ["{{baseUrl}}"],"path": ["api","admin","users"]}}},
+        {"name": "Delete User","request": {"method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/users/:id","host": ["{{baseUrl}}"],"path": ["api","admin","users",":id"]}}},
+        {"name": "Update User","request": {"method": "PUT","description": "Admin: update any user's core fields (email, name, role, password). Exclude password if not changing.","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/users/:id","host": ["{{baseUrl}}"],"path": ["api","admin","users",":id"]},"body": {"mode": "raw","raw": "{\n  \"name\": \"Changed Name\",\n  \"email\": \"changed@example.com\",\n  \"role\": \"admin\",\n  \"password\": \"OptionalNewPass123!\"\n}"}}},
+        {"name": "Reset User Password","request": {"method": "POST","description": "Admin: generate and email a temporary password to the user.","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/users/:id/reset-password","host": ["{{baseUrl}}"],"path": ["api","admin","users",":id","reset-password"]}}},
+        {"name": "Reset & Seed Users","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/users/reset","host": ["{{baseUrl}}"],"path": ["api","admin","users","reset"]},"body": {"mode": "raw","raw": "{\n  \"users\": [\n    {\n      \"name\": \"Admin\",\n      \"email\": \"admin@example.com\",\n      \"password\": \"AdminPass123!\",\n      \"role\": \"admin\"\n    },\n    {\n      \"name\": \"User\",\n      \"email\": \"user@example.com\",\n      \"password\": \"UserPass123!\",\n      \"role\": \"user\"\n    }\n  ]\n}"}}},
+        {"name": "All Alerts","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/alerts","host": ["{{baseUrl}}"],"path": ["api","admin","alerts"]}}},
+        {"name": "All Offers","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/offers","host": ["{{baseUrl}}"],"path": ["api","admin","offers"]}}},
+        {"name": "All Trackers","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/trackers","host": ["{{baseUrl}}"],"path": ["api","admin","trackers"]}}},
+        {"name": "Run Scrape","request": {"method": "POST","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/scrape","host": ["{{baseUrl}}"],"path": ["api","admin","scrape"]}}},
+        {"name": "Email Test","request": {"method": "POST","header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/email-test","host": ["{{baseUrl}}"],"path": ["api","admin","email-test"]},"body": {"mode": "raw","raw": "{\n  \"to\": \"you@example.com\"\n}"}}},
+        {"name": "List Endpoints","request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/endpoints","host": ["{{baseUrl}}"],"path": ["api","admin","endpoints"]}}}
+        ,{"name": "Email Verify","request": {"method": "GET","description": "Verify SMTP transport configuration.","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/email-verify","host": ["{{baseUrl}}"],"path": ["api","admin","email-verify"]}}}
+        ,{"name": "Resend Latest Alert Email","request": {"method": "POST","description": "Force resend of most recently created alert email.","header": [{"key":"Authorization","value":"Bearer {{adminToken}}"}],"url": {"raw": "{{baseUrl}}/api/admin/alerts/resend-latest","host": ["{{baseUrl}}"],"path": ["api","admin","alerts","resend-latest"]}}}
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:4000"},
+    {"key": "adminToken", "value": ""},
+    {"key": "userToken", "value": ""}
+  ]
+}

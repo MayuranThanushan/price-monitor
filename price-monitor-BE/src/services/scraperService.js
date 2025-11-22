@@ -1,7 +1,9 @@
 const urlLib = require('url');
 const Category = require('../models/Category');
+const Tracker = require('../models/Tracker');
 const Product = require('../models/Product');
 const PriceHistory = require('../models/PriceHistory');
+const Alert = require('../models/Alert');
 const emailService = require('./emailService');
 
 let general = null;
@@ -24,11 +26,13 @@ function domainOf(url) {
   try { return new URL(url).origin; } catch { return ''; }
 }
 
-async function upsertProduct(category, scraped) {
+async function upsertProduct(context, scraped) {
+  const { category, tracker, user } = context; // one of category or tracker present
   // match by url if exists else by title
+  const categoryId = category ? category._id : undefined;
   let existing = null;
-  if (scraped.url) existing = await Product.findOne({ categoryId: category._id, url: scraped.url });
-  if (!existing) existing = await Product.findOne({ categoryId: category._id, title: scraped.title });
+  if (scraped.url && categoryId) existing = await Product.findOne({ categoryId, url: scraped.url });
+  if (!existing && categoryId) existing = await Product.findOne({ categoryId, title: scraped.title });
 
   if (existing) {
     const old = existing.currentPrice || existing.lastPrice || scraped.price;
@@ -48,12 +52,50 @@ async function upsertProduct(category, scraped) {
     await PriceHistory.create({ productId: existing._id, price: newp });
 
     // return alert if needed
-    if (trend === 'DOWN') return { type: 'drop', oldPrice: old, newPrice: newp, title: scraped.title, url: existing.url || scraped.url };
-    if (category.maxPrice && old > category.maxPrice && newp <= category.maxPrice) return { type: 'below_threshold', oldPrice: old, newPrice: newp, title: scraped.title, url: existing.url || scraped.url };
+    const alertsToCreate = [];
+    if (trend === 'DOWN') alertsToCreate.push({ type: 'drop', oldPrice: old, newPrice: newp });
+    const maxPrice = category ? category.maxPrice : tracker?.maxPrice;
+    if (maxPrice && old > maxPrice && newp <= maxPrice) alertsToCreate.push({ type: 'below_threshold', oldPrice: old, newPrice: newp });
+    if (alertsToCreate.length) {
+      const createdAlerts = [];
+      for (const a of alertsToCreate) {
+        const doc = await Alert.create({
+          userId: user._id || user.id,
+          categoryId: category?._id,
+          trackerId: tracker?._id,
+          productTitle: scraped.title,
+          productUrl: existing.url || scraped.url,
+          type: a.type,
+          oldPrice: a.oldPrice,
+          newPrice: a.newPrice
+        });
+        createdAlerts.push(doc);
+      }
+      // optionally send immediate email for each alert if enabled
+      if (process.env.ALERT_EMAIL_IMMEDIATE === 'true') {
+        for (const alert of createdAlerts) {
+          try {
+            const subject = `Price Monitor Alert — ${alert.productTitle}`;
+            const to = user.email || process.env.EMAIL_USER;
+            const lines = [];
+            if (alert.type === 'drop') {
+              lines.push(`Price drop: ${alert.oldPrice} -> ${alert.newPrice}`);
+            } else if (alert.type === 'below_threshold') {
+              lines.push(`Price now below threshold: ${alert.newPrice}`);
+            }
+            lines.push(`Link: ${alert.productUrl}`);
+            await emailService.sendEmail({ to, subject, text: lines.join('\n') });
+            alert.emailedAt = new Date();
+            await alert.save();
+          } catch (e) { /* swallow individual failures */ }
+        }
+      }
+      return alertsToCreate.map(a => ({ type: a.type, oldPrice: a.oldPrice, newPrice: a.newPrice, title: scraped.title, url: existing.url || scraped.url }));
+    }
     return null;
   } else {
     const created = await Product.create({
-      categoryId: category._id,
+      categoryId,
       title: scraped.title,
       url: scraped.url || '',
       image: scraped.image || '',
@@ -63,7 +105,29 @@ async function upsertProduct(category, scraped) {
       trend: 'SAME'
     });
     await PriceHistory.create({ productId: created._id, price: scraped.price });
-    if (category.maxPrice && scraped.price <= category.maxPrice) return { type: 'below_threshold', oldPrice: null, newPrice: scraped.price, title: scraped.title, url: created.url || scraped.url };
+    const maxPrice = category ? category.maxPrice : tracker?.maxPrice;
+    if (maxPrice && scraped.price <= maxPrice) {
+      const below = await Alert.create({
+        userId: user._id || user.id,
+        categoryId: category?._id,
+        trackerId: tracker?._id,
+        productTitle: scraped.title,
+        productUrl: created.url || scraped.url,
+        type: 'below_threshold',
+        newPrice: scraped.price
+      });
+      if (process.env.ALERT_EMAIL_IMMEDIATE === 'true') {
+        try {
+          const subject = `Price Monitor Alert — ${below.productTitle}`;
+          const to = user.email || process.env.EMAIL_USER;
+          const text = `Price now below threshold: ${below.newPrice}\nLink: ${below.productUrl}`;
+          await emailService.sendEmail({ to, subject, text });
+          below.emailedAt = new Date();
+          await below.save();
+        } catch (_) {}
+      }
+      return [{ type: 'below_threshold', oldPrice: null, newPrice: scraped.price, title: scraped.title, url: created.url || scraped.url }];
+    }
     return null;
   }
 }
@@ -91,8 +155,8 @@ async function runForCategory(category, user) {
   const alerts = [];
   for (const p of scraped) {
     try {
-      const alert = await upsertProduct(category, p);
-      if (alert) alerts.push(alert);
+      const alert = await upsertProduct({ category, tracker: null, user }, p);
+      if (alert) alerts.push(...(Array.isArray(alert) ? alert : [alert]));
     } catch (err) {
       console.error('Upsert product error', err.message);
     }
@@ -115,17 +179,59 @@ async function runForCategory(category, user) {
   return { category: category.label, scraped: scraped.length, alerts: alerts.length };
 }
 
+async function runForTracker(tracker, user) {
+  const scraper = chooseScraper(tracker.baseUrl);
+  const limit = parseInt(process.env.SCRAPE_PAGE_LIMIT || '50');
+  let scraped = [];
+  try {
+    scraped = await scraper.scrape(tracker.baseUrl, limit);
+  } catch (err) {
+    return { tracker: tracker.name, error: err.message };
+  }
+  if (tracker.keywords && tracker.keywords.length) {
+    const kws = tracker.keywords.map(k => k.toLowerCase());
+    scraped = scraped.filter(p => kws.some(k => p.title.toLowerCase().includes(k)));
+  }
+  const domain = domainOf(tracker.baseUrl);
+  scraped = scraped.map(p => ({ ...p, url: p.url && !p.url.startsWith('http') ? (domain + p.url) : p.url }));
+  const alerts = [];
+  for (const p of scraped) {
+    try {
+      const alert = await upsertProduct({ category: null, tracker, user }, p);
+      if (alert) alerts.push(...(Array.isArray(alert) ? alert : [alert]));
+    } catch (err) {
+      console.error('Upsert product error', err.message);
+    }
+  }
+  if (alerts.length) {
+    const lines = alerts.map(a => {
+      if (a.type === 'drop') return `• ${a.title}\n  Old: ${a.oldPrice}\n  New: ${a.newPrice}\n  Link: ${a.url}\n`;
+      return `• ${a.title}\n  Price: ${a.newPrice}\n  Link: ${a.url}\n`;
+    }).join('\n');
+    const subject = `Price Monitor — ${alerts.length} alert(s) for tracker "${tracker.name}"`;
+    const to = user.email || process.env.EMAIL_USER;
+    const text = `Hello ${user.name || ''},\n\nAlerts for tracker "${tracker.name}":\n\n${lines}\n\n--\nPrice Monitor`;
+    try { await emailService.sendEmail({ to, subject, text }); }
+    catch (err) { console.error('Email send failed', err.message); }
+  }
+  return { tracker: tracker.name, scraped: scraped.length, alerts: alerts.length };
+}
+
 async function runAllActiveScrapers() {
   const categories = await Category.find({ active: true }).populate('userId').lean();
+  const trackers = await Tracker.find({ active: true }).populate('userId').lean();
   const summary = [];
   for (const cat of categories) {
-    // populate user object because we need email
     const user = cat.userId || {};
-    // convert lean cat to object
     const result = await runForCategory(cat, user);
+    summary.push(result);
+  }
+  for (const tr of trackers) {
+    const user = tr.userId || {};
+    const result = await runForTracker(tr, user);
     summary.push(result);
   }
   return summary;
 }
 
-module.exports = { runForCategory, runAllActiveScrapers };
+module.exports = { runForCategory, runForTracker, runAllActiveScrapers };

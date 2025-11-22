@@ -1,4 +1,6 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
+const Alert = require('../models/Alert');
 
 exports.list = async (req, res) => {
   const categories = await Category.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -35,4 +37,47 @@ exports.remove = async (req, res) => {
   const id = req.params.id;
   await Category.findOneAndDelete({ _id: id, userId: req.user.id });
   res.json({ ok: true });
+};
+
+exports.stats = async (req, res) => {
+  // Fetch user categories
+  const categories = await Category.find({ userId: req.user.id }).lean();
+  if (!categories.length) return res.json({ ok: true, data: [] });
+  const ids = categories.map(c => c._id);
+  // Fetch products for these categories
+  const products = await Product.find({ categoryId: { $in: ids } }).lean();
+  // Build stats map
+  const statsMap = {};
+  for (const c of categories) {
+    statsMap[c._id] = {
+      _id: c._id,
+      label: c.label,
+      name: c.name,
+      baseUrl: c.baseUrl,
+      maxPrice: c.maxPrice,
+      active: c.active,
+      productCount: 0,
+      lowestPrice: null,
+      highestPrice: null,
+      avgPrice: null,
+      lastUpdated: null,
+      alertsToday: 0
+    };
+  }
+  for (const p of products) {
+    const s = statsMap[p.categoryId];
+    if (!s) continue;
+    s.productCount++;
+    s.lowestPrice = (s.lowestPrice == null || p.currentPrice < s.lowestPrice) ? p.currentPrice : s.lowestPrice;
+    s.highestPrice = (s.highestPrice == null || p.currentPrice > s.highestPrice) ? p.currentPrice : s.highestPrice;
+    s.avgPrice = s.avgPrice == null ? p.currentPrice : ((s.avgPrice * (s.productCount - 1) + p.currentPrice) / s.productCount);
+    if (!s.lastUpdated || new Date(p.updatedAt) > new Date(s.lastUpdated)) s.lastUpdated = p.updatedAt;
+  }
+  // Alerts today per category
+  const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+  const alerts = await Alert.find({ userId: req.user.id, createdAt: { $gte: startOfDay } }).lean();
+  for (const a of alerts) {
+    if (a.categoryId && statsMap[a.categoryId]) statsMap[a.categoryId].alertsToday++;
+  }
+  res.json({ ok: true, data: Object.values(statsMap) });
 };

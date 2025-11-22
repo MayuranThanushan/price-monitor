@@ -1,37 +1,102 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getCategories } from '../../api/categoryAPI'
+import { getDashboardMetrics } from '../../api/metricsAPI'
+import { getCategoryStats } from '../../api/categoryStatsAPI'
+import { listOffersGrouped } from '../../api/offersAPI'
+import DashboardLayout from '../../components/layout/DashboardLayout'
+import PageContainer from '../../components/ui/PageContainer'
+import SectionClean from '../../components/ui/SectionClean'
+import StateBlock from '../../components/ui/StateBlock'
+import { useBackendGuard } from '../../hooks/useBackendGuard'
+import StatCard from '../../components/dashboard/StatCard'
+import TrackerCard, { TrackerCardProps } from '../../components/dashboard/TrackerCard'
+import OfferCard from '../../components/dashboard/OfferCard'
+import Button from '../../components/ui/Button'
+import { Plus } from 'lucide-react'
 
 export default function Dashboard(){
-  const { data } = useQuery(['categories'], () => getCategories().then(r=>r.data), { refetchOnWindowFocus:false })
-  const cats = data?.data || []
+  const { data: statsData, isLoading: statsLoading, isError: statsError, error: statsErr } = useQuery(['category-stats'], () => getCategoryStats().then(r=>r.data), { refetchOnWindowFocus:false })
+  const { data: metricsData, isError: metricsError, error: metricsErr } = useQuery(['dashboard-metrics'], () => getDashboardMetrics().then(r=>r.data), { refetchOnWindowFocus:false })
+  const { data: offersData, isLoading: offersLoading, isError: offersError } = useQuery(['grouped-offers'], () => listOffersGrouped().then((r:any)=>r.data), { refetchOnWindowFocus:false })
+  useBackendGuard({ isError: statsError, error: statsErr })
+  useBackendGuard({ isError: metricsError, error: metricsErr })
+
+  const trackers: TrackerCardProps[] = (statsData?.data || []).map((c:any)=>{
+    // derive trend relative to midpoint between lowest & highest
+    let trend: 'UP'|'DOWN'|'SAME' = 'SAME';
+    if (c.lowestPrice != null && c.highestPrice != null && c.avgPrice != null) {
+      const mid = (c.lowestPrice + c.highestPrice) / 2;
+      if (c.avgPrice < mid * 0.95) trend = 'DOWN';
+      else if (c.avgPrice > mid * 1.05) trend = 'UP';
+    }
+    return {
+      id: c._id,
+      name: c.label || c.name || 'Unnamed',
+      url: c.baseUrl,
+      currentPrice: c.lowestPrice != null ? c.lowestPrice : undefined,
+      avgPrice: c.avgPrice != null ? c.avgPrice : undefined,
+      targetPrice: c.maxPrice != null ? c.maxPrice : undefined,
+      productCount: c.productCount,
+      trend,
+      status: c.productCount ? 'OK' : 'WATCH'
+    } as TrackerCardProps
+  })
+
+  const productsTracked = metricsData?.data?.productsTracked
+  const alertsToday = metricsData?.data?.alertsToday
+  const activeTrackers = metricsData?.data?.activeTrackers
+  // offersData expected shape: { data: [{ shop: string, offers: Offer[] }] }
+  const flattenedOffers = (offersData?.data || []).flatMap((g:any) => g.offers || [])
+
   return (
-    <div className='max-w-6xl mx-auto'>
-      <div className='grid grid-cols-3 gap-4 mb-6'>
-        <div className='bg-white p-4 rounded shadow'>Active trackers: {cats.length}</div>
-        <div className='bg-white p-4 rounded shadow'>Products tracked: 0</div>
-        <div className='bg-white p-4 rounded shadow'>Alerts (today): 0</div>
-      </div>
-
-      <div className='flex justify-between items-center mb-4'>
-        <h3 className='text-xl font-semibold'>Your Trackers</h3>
-        <Link to='/trackers/new' className='bg-blue-600 text-white px-3 py-1 rounded'>+ New Tracker</Link>
-      </div>
-
-      <div className='space-y-3'>
-        {cats.map((c:any)=>(
-          <div key={c._id} className='bg-white p-4 rounded shadow flex justify-between items-center'>
-            <div>
-              <div className='font-semibold'>{c.name}</div>
-              <div className='text-sm text-gray-500'>{c.categoryUrl}</div>
-            </div>
-            <div className='flex gap-2'>
-              <Link to={`/trackers/${c._id}`} className='text-blue-600'>Open</Link>
-            </div>
+    <DashboardLayout>
+      <PageContainer>
+        <SectionClean title='Overview'>
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4'>
+            <StatCard label='Active Trackers' value={activeTrackers ?? 'No data'} />
+            <StatCard label='Products Tracked' value={productsTracked ?? 'No data'} />
+            <StatCard label='Alerts Today' value={alertsToday ?? 'No data'} />
+            <StatCard label='Offers Available' value={flattenedOffers.length || (offersLoading ? 'Loading...' : offersError ? 'No data' : '0')} />
           </div>
-        ))}
-      </div>
-    </div>
+        </SectionClean>
+        <div className='grid lg:grid-cols-3 gap-8 mt-10'>
+          <div className='lg:col-span-2'>
+            <SectionClean
+              title='Trackers'
+              actions={
+                <Button
+                  to='/trackers/new'
+                  size='sm'
+                  variant='primary'
+                  leftIcon={<Plus size={14} />}
+                  className='shadow-sm'
+                >
+                  New Tracker
+                </Button>
+              }
+            />
+            {statsLoading && <StateBlock variant='loading' />}
+            {statsError && <StateBlock variant='error' />}
+            {!statsLoading && !statsError && trackers.length === 0 && <StateBlock variant='empty' message='No data to show.' />}
+            {!statsLoading && !statsError && trackers.length > 0 && (
+              <div className='grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-4'>
+                {trackers.map(t => <TrackerCard key={t.id} {...t} />)}
+              </div>
+            )}
+          </div>
+          <div>
+            <SectionClean title='Card & Bank Offers' />
+            {offersLoading && <StateBlock variant='loading' />}
+            {offersError && <StateBlock variant='error' />}
+            {!offersLoading && !offersError && flattenedOffers.length === 0 && <StateBlock variant='empty' message='No data to show.' />}
+            {!offersLoading && !offersError && flattenedOffers.length > 0 && (
+              <div className='space-y-4 mt-4'>
+                {flattenedOffers.map((o:any) => <OfferCard key={o._id || o.id} {...o} />)}
+              </div>
+            )}
+          </div>
+        </div>
+      </PageContainer>
+    </DashboardLayout>
   )
 }

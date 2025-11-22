@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Button from '../../components/ui/Button'
+import { Plus, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createCategory } from '../../api/categoryAPI'
 import KeywordInput from '../../components/forms/KeywordInput'
+import DashboardLayout from '../../components/layout/DashboardLayout'
+import PageContainer from '../../components/ui/PageContainer'
+import SectionClean from '../../components/ui/SectionClean'
 
 export default function CreateTracker(){
   const [name,setName]=useState(''), [baseUrl,setBaseUrl]=useState(''), [categoryUrl,setCategoryUrl]=useState(''), [keywords,setKeywords]=useState<string[]>([]), [maxPrice,setMaxPrice]=useState<number|''>(''), [active,setActive]=useState(true)
@@ -19,24 +24,27 @@ export default function CreateTracker(){
   }
 
   return (
-    <div className='max-w-xl mx-auto bg-white p-6 rounded shadow'>
-      <h3 className='text-lg font-semibold mb-4'>New Tracker</h3>
-      <form onSubmit={submit} className='space-y-3'>
-        <input className='w-full border px-3 py-2 rounded' placeholder='Tracker name' value={name} onChange={e=>setName(e.target.value)} />
-        <input className='w-full border px-3 py-2 rounded' placeholder='Base URL (e.g. https://www.daraz.lk)' value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} />
-        <input className='w-full border px-3 py-2 rounded' placeholder='Category URL' value={categoryUrl} onChange={e=>setCategoryUrl(e.target.value)} />
-        <div>
-          <KeywordInput value={keywords} onChange={setKeywords} />
-        </div>
-        <input className='w-full border px-3 py-2 rounded' placeholder='Max price' value={maxPrice} onChange={e=>setMaxPrice(e.target.value?Number(e.target.value):'')} />
-        <div className='flex items-center gap-2'>
-          <input type='checkbox' checked={active} onChange={e=>setActive(e.target.checked)} /> Active
-        </div>
-        <div className='flex gap-2'>
-          <button className='bg-blue-600 text-white px-4 py-2 rounded'>Create</button>
-          <button type='button' onClick={()=>nav('/trackers')} className='px-4 py-2 rounded border'>Cancel</button>
-        </div>
-      </form>
-    </div>
+    <DashboardLayout>
+      <PageContainer>
+        <SectionClean title='New Tracker' className='mt-10'>
+          <form onSubmit={submit} className='space-y-4 rounded-lg border border-gray-200 bg-white p-6 max-w-xl'>
+            <input className='w-full border border-gray-300 px-3 py-2 rounded text-sm' placeholder='Tracker name' value={name} onChange={e=>setName(e.target.value)} />
+            <input className='w-full border border-gray-300 px-3 py-2 rounded text-sm' placeholder='Base URL (e.g. https://www.daraz.lk)' value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} />
+            <input className='w-full border border-gray-300 px-3 py-2 rounded text-sm' placeholder='Category URL' value={categoryUrl} onChange={e=>setCategoryUrl(e.target.value)} />
+            <div>
+              <KeywordInput value={keywords} onChange={setKeywords} />
+            </div>
+            <input className='w-full border border-gray-300 px-3 py-2 rounded text-sm' placeholder='Max price' value={maxPrice} onChange={e=>setMaxPrice(e.target.value?Number(e.target.value):'')} />
+            <label className='flex items-center gap-2 text-xs text-gray-600'>
+              <input type='checkbox' checked={active} onChange={e=>setActive(e.target.checked)} /> Active
+            </label>
+            <div className='flex gap-3'>
+              <Button type='submit' variant='primary' size='sm' leftIcon={<Plus className='h-3 w-3' />}>Create</Button>
+              <Button type='button' variant='subtle' size='sm' onClick={()=>nav('/trackers')} leftIcon={<X className='h-3 w-3' />}>Cancel</Button>
+            </div>
+          </form>
+        </SectionClean>
+      </PageContainer>
+    </DashboardLayout>
   )
 }
