@@ -75,16 +75,19 @@ async function upsertProduct(context, scraped) {
       if (process.env.ALERT_EMAIL_IMMEDIATE === 'true') {
         for (const alert of createdAlerts) {
           try {
-            const subject = `Price Monitor Alert — ${alert.productTitle}`;
             const to = user.email || process.env.EMAIL_USER;
-            const lines = [];
-            if (alert.type === 'drop') {
-              lines.push(`Price drop: ${alert.oldPrice} -> ${alert.newPrice}`);
-            } else if (alert.type === 'below_threshold') {
-              lines.push(`Price now below threshold: ${alert.newPrice}`);
-            }
-            lines.push(`Link: ${alert.productUrl}`);
-            await emailService.sendEmail({ to, subject, text: lines.join('\n') });
+            await emailService.sendEmail({
+              to,
+              type: 'alert_single',
+              data: {
+                title: alert.productTitle,
+                type: alert.type,
+                oldPrice: alert.oldPrice,
+                newPrice: alert.newPrice,
+                url: alert.productUrl,
+                name: user.name
+              }
+            });
             alert.emailedAt = new Date();
             await alert.save();
           } catch (e) { /* swallow individual failures */ }
@@ -118,10 +121,19 @@ async function upsertProduct(context, scraped) {
       });
       if (process.env.ALERT_EMAIL_IMMEDIATE === 'true') {
         try {
-          const subject = `Price Monitor Alert — ${below.productTitle}`;
           const to = user.email || process.env.EMAIL_USER;
-          const text = `Price now below threshold: ${below.newPrice}\nLink: ${below.productUrl}`;
-          await emailService.sendEmail({ to, subject, text });
+          await emailService.sendEmail({
+            to,
+            type: 'alert_single',
+            data: {
+              title: below.productTitle,
+              type: below.type,
+              oldPrice: below.oldPrice,
+              newPrice: below.newPrice,
+              url: below.productUrl,
+              name: user.name
+            }
+          });
           below.emailedAt = new Date();
           await below.save();
         } catch (_) {}
@@ -169,10 +181,19 @@ async function runForCategory(category, user) {
       return `• ${a.title}\n  Price: ${a.newPrice}\n  Link: ${a.url}\n`;
     }).join('\n');
 
-    const subject = `Price Monitor — ${alerts.length} alert(s) for "${category.label}"`;
-    const to = user.email || process.env.EMAIL_USER;
-    const text = `Hello ${user.name || ''},\n\nThe following items triggered alerts for tracker "${category.label}":\n\n${lines}\n\n--\nPrice Monitor`;
-    try { await emailService.sendEmail({ to, subject, text }); }
+    try {
+      const to = user.email || process.env.EMAIL_USER;
+      await emailService.sendEmail({
+        to,
+        type: 'alert_digest',
+        data: {
+          label: category.label,
+          count: alerts.length,
+          items: alerts.map(a => ({ title: a.title, type: a.type, oldPrice: a.oldPrice, newPrice: a.newPrice })),
+          name: user.name
+        }
+      });
+    }
     catch (err) { console.error('Email send failed', err.message); }
   }
 
@@ -208,10 +229,19 @@ async function runForTracker(tracker, user) {
       if (a.type === 'drop') return `• ${a.title}\n  Old: ${a.oldPrice}\n  New: ${a.newPrice}\n  Link: ${a.url}\n`;
       return `• ${a.title}\n  Price: ${a.newPrice}\n  Link: ${a.url}\n`;
     }).join('\n');
-    const subject = `Price Monitor — ${alerts.length} alert(s) for tracker "${tracker.name}"`;
-    const to = user.email || process.env.EMAIL_USER;
-    const text = `Hello ${user.name || ''},\n\nAlerts for tracker "${tracker.name}":\n\n${lines}\n\n--\nPrice Monitor`;
-    try { await emailService.sendEmail({ to, subject, text }); }
+    try {
+      const to = user.email || process.env.EMAIL_USER;
+      await emailService.sendEmail({
+        to,
+        type: 'alert_digest',
+        data: {
+          label: tracker.name,
+          count: alerts.length,
+          items: alerts.map(a => ({ title: a.title, type: a.type, oldPrice: a.oldPrice, newPrice: a.newPrice })),
+          name: user.name
+        }
+      });
+    }
     catch (err) { console.error('Email send failed', err.message); }
   }
   return { tracker: tracker.name, scraped: scraped.length, alerts: alerts.length };

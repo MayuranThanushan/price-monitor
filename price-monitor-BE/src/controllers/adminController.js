@@ -13,7 +13,7 @@ exports.runScrape = async (req, res) => {
 exports.testEmail = async (req, res) => {
   const { to } = req.body;
   if (!to) return res.status(400).json({ ok: false, error: 'to required' });
-  await emailService.sendEmail({ to, subject: 'Price Monitor Test', text: 'This is a test' });
+  await emailService.sendEmail({ to, type: 'test' });
   res.json({ ok: true });
 };
 
@@ -117,8 +117,8 @@ exports.resetPassword = async (req, res) => {
   try {
     await emailService.sendEmail({
       to: user.email,
-      subject: 'Your Password Has Been Reset',
-      text: `A temporary password has been generated: ${temp}\nPlease login and change it immediately.`
+      type: 'reset_password_admin',
+      data: { temp, name: user.name }
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'Email failed to send' });
@@ -193,7 +193,7 @@ exports.resendLatestAlertEmail = async (req, res) => {
     } else {
       text = `Price below threshold: ${latest.newPrice}\nLink: ${latest.productUrl}`;
     }
-    await emailService.sendEmail({ to, subject, text });
+    await emailService.sendEmail({ to, type: 'alert_single', data: { title: latest.productTitle, type: latest.type, oldPrice: latest.oldPrice, newPrice: latest.newPrice, url: latest.productUrl, name: user?.name } });
     latest.emailedAt = new Date();
     await latest.save();
     res.json({ ok: true, alertId: latest._id, emailedAt: latest.emailedAt });

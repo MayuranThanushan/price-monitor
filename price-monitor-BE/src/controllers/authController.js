@@ -73,8 +73,8 @@ exports.forgotPassword = async (req, res) => {
   try {
     await emailService.sendEmail({
       to: email,
-      subject: 'Your Price Monitor Temporary Password',
-      text: `Temporary password: ${temp}\nPlease log in and change it immediately.`
+      type: 'forgot_password',
+      data: { temp, name: user.name }
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'Failed to send email' });

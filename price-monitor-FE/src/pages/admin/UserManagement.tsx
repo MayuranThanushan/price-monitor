@@ -117,7 +117,6 @@ export default function UserManagement(){
                       <td className='px-4 py-2 text-xs text-gray-500'>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className='px-4 py-2 space-x-2'>
                         <Button
-                          size='xs'
                           variant='secondary'
                           aria-label='Edit user'
                           title='Edit user'
@@ -126,7 +125,6 @@ export default function UserManagement(){
                           <Pencil className='h-4 w-4' />
                         </Button>
                         <Button
-                          size='xs'
                           variant='outline'
                           aria-label='Reset password'
                           title='Reset password'

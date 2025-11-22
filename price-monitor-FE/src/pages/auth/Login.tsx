@@ -51,12 +51,12 @@ export default function Login(){
   return (
     <div className='grid grid-cols-1 md:grid-cols-2 min-h-screen w-full'>
       {/* Left image panel */}
-      <div className='hidden md:block min-h-full w-full bg-green-100'>
+      <div className='hidden md:block min-h-full w-full bg-green-100 p-24'>
         <div className='h-full w-full relative'>
           <img
             src='../src/assets/login-bg.png'
             alt='Price Monitor'
-            className='absolute inset-0 m-auto'
+            className='absolute inset-0 m-auto max-w-full max-h-full'
           />
         </div>
       </div>
@@ -106,8 +106,8 @@ export default function Login(){
                         {loading ? 'Signing in…' : 'Sign In'}
                       </Button>
             </div>
-            <div className='text-right text-xs'>
-              <button type='button' onClick={()=>{ setForgotMode(true); setForgotEmail(email); }} className='text-green-600 hover:underline'>Forgot password?</button>
+            <div className='text-sm'>
+              <a role='button' onClick={()=>{ setForgotMode(true); setForgotEmail(email); }} className='text-red-600 hover:underline'>Forgot password?</a>
             </div>
           </form>
           )}

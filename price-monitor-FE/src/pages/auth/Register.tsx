@@ -34,12 +34,12 @@ export default function Register(){
   return (
     <div className='grid grid-cols-1 md:grid-cols-2 min-h-screen w-full'>
       {/* Left image panel */}
-      <div className='hidden md:block min-h-full w-full bg-green-100'>
+      <div className='hidden md:block min-h-full w-full bg-green-100 p-24'>
         <div className='h-full w-full relative'>
           <img
             src='../src/assets/login-bg.png'
             alt='Price Monitor'
-            className='absolute inset-0 m-auto'
+            className='absolute inset-0 m-auto max-w-full max-h-full'
           />
         </div>
       </div>

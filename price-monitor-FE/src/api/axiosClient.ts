@@ -1,7 +1,21 @@
 import axios from 'axios'
 
+// Determine API base URL (priority: explicit env -> legacy env name -> window -> localhost)
+const env = (import.meta as any)?.env || {}
+const explicit = env.VITE_API_BASE_URL || env.VITE_API_URL
+let derived = explicit
+if (!derived && typeof window !== 'undefined') {
+  // If frontend served from same domain, attempt relative API path assumption
+  const origin = window.location.origin
+  // If production domain detected, prefer it
+  if (/pricemonitor-production\.up\.railway\.app/.test(origin)) {
+    derived = origin
+  }
+}
+const baseURL = derived || 'http://localhost:4000'
+
 const api = axios.create({
-  baseURL: (import.meta as any)?.env?.VITE_API_URL || 'http://localhost:4000',
+  baseURL,
   headers: { 'Content-Type': 'application/json' }
 })
 
@@ -17,3 +31,4 @@ api.interceptors.request.use((cfg) => {
 })
 
 export default api
+export { baseURL }
