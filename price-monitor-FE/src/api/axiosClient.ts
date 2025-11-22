@@ -6,13 +6,23 @@ let host = env.VITE_API_BASE_URL || env.VITE_API_URL || ''
 if (!host && typeof window !== 'undefined') host = window.location.origin
 if (!host) host = 'https://pricemonitor-production.up.railway.app'
 
-// Ensure single /api suffix (backend mounts routes under /api/*)
-const baseURL = host.replace(/\/$/, '').match(/\/api$/) ? host : host.replace(/\/$/, '') + '/api'
+function resolveHost(){
+  const env = (import.meta as any)?.env || {}
+  const override = typeof window !== 'undefined' ? window.localStorage.getItem('pm_api_host') : null
+  let host = override || env.VITE_API_BASE_URL || env.VITE_API_URL || ''
+  if (!host && typeof window !== 'undefined') host = window.location.origin
+  if (!host) host = 'https://pricemonitor-production.up.railway.app'
+  return host
+}
 
-const api = axios.create({
-  baseURL,
-  headers: { 'Content-Type': 'application/json' }
-})
+function withApiSuffix(host: string){
+  const trimmed = host.replace(/\/$/, '')
+  return /\/api$/.test(trimmed) ? trimmed : trimmed + '/api'
+}
+
+let baseURL = withApiSuffix(resolveHost())
+
+const api = axios.create({ baseURL, headers: { 'Content-Type': 'application/json' } })
 
 api.interceptors.request.use((cfg) => {
   const token = localStorage.getItem('pm_token')
@@ -24,6 +34,18 @@ api.interceptors.request.use((cfg) => {
   }
   return cfg
 })
+
+export function overrideApiHost(newHost: string){
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('pm_api_host', newHost)
+    baseURL = withApiSuffix(newHost)
+    api.defaults.baseURL = baseURL
+  }
+}
+
+export function currentApiHost(){
+  return baseURL
+}
 
 export default api
 export { baseURL }

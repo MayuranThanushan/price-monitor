@@ -44,9 +44,9 @@ export default function Dashboard(){
     } as TrackerCardProps
   })
 
-  const productsTracked = metricsData?.data?.productsTracked
-  const alertsToday = metricsData?.data?.alertsToday
-  const activeTrackers = metricsData?.data?.activeTrackers
+  const productsTracked = !metricsError ? metricsData?.data?.productsTracked : null
+  const alertsToday = !metricsError ? metricsData?.data?.alertsToday : null
+  const activeTrackers = !metricsError ? metricsData?.data?.activeTrackers : null
   // offersData expected shape: { data: [{ shop: string, offers: Offer[] }] }
   const flattenedOffers = (offersData?.data || []).flatMap((g:any) => g.offers || [])
 
