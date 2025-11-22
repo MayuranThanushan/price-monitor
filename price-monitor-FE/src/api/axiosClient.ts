@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Determine API base URL (priority: explicit env -> legacy env name -> window -> localhost)
 const env = (import.meta as any)?.env || {}
-const explicit = env.VITE_API_BASE_URL || env.VITE_API_URL
+const explicit = env.VITE_API_BASE_URL || env.VITE_API_URL || 'https://pricemonitor-production.up.railway.app'
 let derived = explicit
 if (!derived && typeof window !== 'undefined') {
   // If frontend served from same domain, attempt relative API path assumption
@@ -12,7 +12,7 @@ if (!derived && typeof window !== 'undefined') {
     derived = origin
   }
 }
-const baseURL = derived || 'http://localhost:4000'
+const baseURL = derived || 'https://pricemonitor-production.up.railway.app'
 
 const api = axios.create({
   baseURL,
