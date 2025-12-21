@@ -1,5 +1,5 @@
-import React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import React, { useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getDashboardMetrics } from '../../api/metricsAPI'
 import { getHealth } from '../../api/healthAPI'
 import { getCategoryStats } from '../../api/categoryStatsAPI'
@@ -15,12 +15,34 @@ import OfferCard from '../../components/dashboard/OfferCard'
 import Button from '../../components/ui/Button'
 import { Plus } from 'lucide-react'
 import { currentApiHost } from '../../api/axiosClient'
+import { useToast } from '../../context/ToastStore'
 
 export default function Dashboard(){
-  const { data: statsData, isLoading: statsLoading, isError: statsError, error: statsErr } = useQuery(['category-stats'], () => getCategoryStats().then(r=>r.data), { refetchOnWindowFocus:false })
-  const { data: metricsData, isError: metricsError, error: metricsErr } = useQuery(['dashboard-metrics'], () => getDashboardMetrics().then(r=>r.data), { refetchOnWindowFocus:false })
-  const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery(['health'], () => getHealth().then(r=>r.data), { refetchOnWindowFocus:false, refetchInterval: 60000 })
-  const { data: offersData, isLoading: offersLoading, isError: offersError } = useQuery(['grouped-offers'], () => listOffersGrouped().then((r:any)=>r.data), { refetchOnWindowFocus:false })
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const lastUpdatedRef = useRef<number>(Date.now());
+  const { data: statsData, isLoading: statsLoading, isError: statsError, error: statsErr, refetch: refetchStats } = useQuery(['category-stats'], () => getCategoryStats().then(r=>r.data), { refetchOnWindowFocus:false, onSuccess: () => { lastUpdatedRef.current = Date.now(); } })
+  const { data: metricsData, isError: metricsError, error: metricsErr, refetch: refetchMetrics } = useQuery(['dashboard-metrics'], () => getDashboardMetrics().then(r=>r.data), { refetchOnWindowFocus:false, onSuccess: () => { lastUpdatedRef.current = Date.now(); } })
+  const { data: healthData, isLoading: healthLoading, isError: healthError, refetch: refetchHealth } = useQuery(['health'], () => getHealth().then(r=>r.data), { refetchOnWindowFocus:false, refetchInterval: 60000, onSuccess: () => { lastUpdatedRef.current = Date.now(); } })
+  const { data: offersData, isLoading: offersLoading, isError: offersError, refetch: refetchOffers } = useQuery(['grouped-offers'], () => listOffersGrouped().then((r:any)=>r.data), { refetchOnWindowFocus:false, onSuccess: () => { lastUpdatedRef.current = Date.now(); } })
+    function handleRefresh() {
+      Promise.all([
+        refetchStats(),
+        refetchMetrics(),
+        refetchHealth(),
+        refetchOffers(),
+      ]).then(() => {
+        lastUpdatedRef.current = Date.now();
+        showToast('Dashboard data refreshed', 'success');
+      }).catch(() => {
+        showToast('Failed to refresh dashboard', 'error');
+      });
+    }
+
+    function formatTime(ts: number) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
   useBackendGuard({ isError: statsError, error: statsErr })
   useBackendGuard({ isError: metricsError, error: metricsErr })
 
@@ -56,7 +78,11 @@ export default function Dashboard(){
   return (
     <DashboardLayout>
       <PageContainer>
-        <SectionClean title='Overview'>
+        <SectionClean title='Overview' actions={
+          <Button size='sm' variant='secondary' onClick={handleRefresh}>
+            Refresh
+          </Button>
+        }>
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4'>
             <StatCard label='Active Trackers' value={activeTrackers ?? 'No data'} />
             <StatCard label='Products Tracked' value={productsTracked ?? 'No data'} />
@@ -64,8 +90,11 @@ export default function Dashboard(){
             <StatCard label='Offers Available' value={flattenedOffers.length || (offersLoading ? 'Loading...' : offersError ? 'No data' : '0')} />
             <StatCard label='API Uptime (s)' value={healthLoading ? '...' : healthError ? 'Down' : Math.floor(healthData?.uptime ?? 0)} />
           </div>
-          <div className='mt-6 text-xs text-gray-500'>
-            Host: <span className='font-mono'>{apiHost}</span> | Token: {localStorage.getItem('pm_token') ? 'present' : 'missing'} {anyQueryError && <span className='text-red-600 ml-2'>(data load error)</span>}
+          <div className='mt-6 text-xs text-gray-500 flex flex-wrap gap-4 items-center'>
+            <span>Host: <span className='font-mono'>{apiHost}</span></span>
+            <span>Token: {localStorage.getItem('pm_token') ? 'present' : 'missing'}</span>
+            {anyQueryError && <span className='text-red-600'>(data load error)</span>}
+            <span>Last updated: {formatTime(lastUpdatedRef.current)}</span>
           </div>
         </SectionClean>
         <div className='grid lg:grid-cols-3 gap-8 mt-10'>
